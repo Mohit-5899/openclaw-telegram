@@ -436,209 +436,176 @@ async def get_bot_info() -> Optional[TelegramUser]:
 
 TELEGRAM_TOOLS = [
     {
-        "type": "function",
-        "function": {
-            "name": "send_message",
-            "description": "Send a message to a Telegram chat or user",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {
-                        "type": "integer",
-                        "description": "The chat ID to send the message to"
-                    },
-                    "text": {
-                        "type": "string",
-                        "description": "The message text to send"
-                    }
+        "name": "send_message",
+        "description": "Send a message to a Telegram chat or user",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer",
+                    "description": "The chat ID to send the message to"
                 },
-                "required": ["chat_id", "text"]
-            }
+                "text": {
+                    "type": "string",
+                    "description": "The message text to send"
+                }
+            },
+            "required": ["chat_id", "text"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "get_user_info",
-            "description": "Get information about a Telegram user",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "user_id": {
-                        "type": "integer",
-                        "description": "The user ID to get info for"
-                    }
-                },
-                "required": ["user_id"]
-            }
+        "name": "get_user_info",
+        "description": "Get information about a Telegram user",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer",
+                    "description": "The user ID to get info for"
+                }
+            },
+            "required": ["user_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "get_chat_info",
-            "description": "Get information about a Telegram chat or group",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {
-                        "type": "integer",
-                        "description": "The chat ID to get info for"
-                    }
-                },
-                "required": ["chat_id"]
-            }
+        "name": "get_chat_info",
+        "description": "Get information about a Telegram chat or group",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer",
+                    "description": "The chat ID to get info for"
+                }
+            },
+            "required": ["chat_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "get_chat_member_count",
-            "description": "Get the number of members in a Telegram group or channel",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {
-                        "type": "integer",
-                        "description": "The chat ID to count members for"
-                    }
-                },
-                "required": ["chat_id"]
-            }
+        "name": "get_chat_member_count",
+        "description": "Get the number of members in a Telegram group or channel",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer",
+                    "description": "The chat ID to count members for"
+                }
+            },
+            "required": ["chat_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "get_chat_administrators",
-            "description": "Get the list of administrators in a Telegram group",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {
-                        "type": "integer",
-                        "description": "The chat ID to get admins for"
-                    }
-                },
-                "required": ["chat_id"]
-            }
+        "name": "get_chat_administrators",
+        "description": "Get the list of administrators in a Telegram group",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer",
+                    "description": "The chat ID to get admins for"
+                }
+            },
+            "required": ["chat_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "forward_message",
-            "description": "Forward a message from one chat to another",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "from_chat_id": {
-                        "type": "integer",
-                        "description": "The source chat ID"
-                    },
-                    "to_chat_id": {
-                        "type": "integer",
-                        "description": "The target chat ID"
-                    },
-                    "message_id": {
-                        "type": "integer",
-                        "description": "The message ID to forward"
-                    }
+        "name": "forward_message",
+        "description": "Forward a message from one chat to another",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "from_chat_id": {
+                    "type": "integer",
+                    "description": "The source chat ID"
                 },
-                "required": ["from_chat_id", "to_chat_id", "message_id"]
-            }
+                "to_chat_id": {
+                    "type": "integer",
+                    "description": "The target chat ID"
+                },
+                "message_id": {
+                    "type": "integer",
+                    "description": "The message ID to forward"
+                }
+            },
+            "required": ["from_chat_id", "to_chat_id", "message_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "pin_message",
-            "description": "Pin a message in a Telegram chat",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {
-                        "type": "integer",
-                        "description": "The chat ID"
-                    },
-                    "message_id": {
-                        "type": "integer",
-                        "description": "The message ID to pin"
-                    }
+        "name": "pin_message",
+        "description": "Pin a message in a Telegram chat",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer",
+                    "description": "The chat ID"
                 },
-                "required": ["chat_id", "message_id"]
-            }
+                "message_id": {
+                    "type": "integer",
+                    "description": "The message ID to pin"
+                }
+            },
+            "required": ["chat_id", "message_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "unpin_message",
-            "description": "Unpin a message in a Telegram chat",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {
-                        "type": "integer",
-                        "description": "The chat ID"
-                    },
-                    "message_id": {
-                        "type": "integer",
-                        "description": "Optional specific message ID to unpin"
-                    }
+        "name": "unpin_message",
+        "description": "Unpin a message in a Telegram chat",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer",
+                    "description": "The chat ID"
                 },
-                "required": ["chat_id"]
-            }
+                "message_id": {
+                    "type": "integer",
+                    "description": "Optional specific message ID to unpin"
+                }
+            },
+            "required": ["chat_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "schedule_reminder",
-            "description": "Schedule a reminder to be sent at a specific time. Use natural language like 'in 5 minutes', 'tomorrow at 9am', etc.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "reminder_text": {
-                        "type": "string",
-                        "description": "The reminder message"
-                    },
-                    "time_expression": {
-                        "type": "string",
-                        "description": "When to send the reminder (e.g., 'in 5 minutes', 'tomorrow at 9am', 'at 3pm')"
-                    }
+        "name": "schedule_reminder",
+        "description": "Schedule a reminder to be sent at a specific time. Use natural language like 'in 5 minutes', 'tomorrow at 9am', etc.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "reminder_text": {
+                    "type": "string",
+                    "description": "The reminder message"
                 },
-                "required": ["reminder_text", "time_expression"]
-            }
+                "time_expression": {
+                    "type": "string",
+                    "description": "When to send the reminder (e.g., 'in 5 minutes', 'tomorrow at 9am', 'at 3pm')"
+                }
+            },
+            "required": ["reminder_text", "time_expression"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "list_reminders",
-            "description": "List all scheduled reminders for the current user",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
+        "name": "list_reminders",
+        "description": "List all scheduled reminders for the current user",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "cancel_reminder",
-            "description": "Cancel a scheduled reminder by its ID",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "reminder_id": {
-                        "type": "integer",
-                        "description": "The reminder ID to cancel"
-                    }
-                },
-                "required": ["reminder_id"]
-            }
+        "name": "cancel_reminder",
+        "description": "Cancel a scheduled reminder by its ID",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "reminder_id": {
+                    "type": "integer",
+                    "description": "The reminder ID to cancel"
+                }
+            },
+            "required": ["reminder_id"]
         }
     }
 ]

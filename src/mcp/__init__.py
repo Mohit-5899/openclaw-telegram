@@ -7,7 +7,7 @@ from .client import (
     execute_tool,
 )
 from .config import load_mcp_config
-from .tool_converter import mcp_tools_to_openai, format_mcp_result
+from .tool_converter import mcp_tools_to_anthropic, format_mcp_result
 
 __all__ = [
     "initialize_mcp",
@@ -15,6 +15,6 @@ __all__ = [
     "get_all_tools",
     "execute_tool",
     "load_mcp_config",
-    "mcp_tools_to_openai",
+    "mcp_tools_to_anthropic",
     "format_mcp_result",
 ]

@@ -1,0 +1,15 @@
+services:
+  clawdbot:
+    build: .
+    container_name: clawdbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - clawdbot-data:/app/data
+      - clawdbot-logs:/app/logs
+    # No ports needed — bot uses polling, not webhooks
+
+volumes:
+  clawdbot-data:
+  clawdbot-logs:

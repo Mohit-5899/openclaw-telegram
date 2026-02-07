@@ -10,7 +10,7 @@ An AI-powered Telegram assistant with advanced capabilities including RAG (Retri
 | 🔍 **RAG** | Semantic search over chat history using vector embeddings |
 | 🔧 **MCP Tools** | GitHub and Notion integration via Model Context Protocol |
 | ⏰ **Scheduler** | Task scheduling with reminders |
-| 💬 **Multi-Model** | Supports OpenAI GPT models |
+| 💬 **Claude Opus 4.6** | Powered by Anthropic's latest model |
 
 ## Quick Start
 
@@ -34,6 +34,9 @@ Edit `.env` with your credentials:
 ```env
 # Required
 TELEGRAM_BOT_TOKEN=your_bot_token_from_botfather
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# Required for RAG embeddings
 OPENAI_API_KEY=your_openai_api_key
 
 # Optional - Memory
@@ -118,8 +121,9 @@ User Message → Telegram Bot → Agent
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `TELEGRAM_BOT_TOKEN` | ✅ | Bot token from @BotFather |
-| `OPENAI_API_KEY` | ✅ | OpenAI API key |
-| `AI_MODEL` | ❌ | Model name (default: gpt-4o) |
+| `ANTHROPIC_API_KEY` | ✅ | Anthropic API key |
+| `OPENAI_API_KEY` | ❌ | OpenAI API key (for RAG embeddings) |
+| `AI_MODEL` | ❌ | Model name (default: claude-opus-4-6) |
 | `MEM0_API_KEY` | ❌ | mem0.ai API key for memory |
 | `MEMORY_ENABLED` | ❌ | Enable/disable memory (default: true) |
 | `RAG_ENABLED` | ❌ | Enable/disable RAG (default: true) |
@@ -134,7 +138,11 @@ User Message → Telegram Bot → Agent
 2. Send `/newbot` and follow prompts
 3. Copy the token
 
-### OpenAI API Key
+### Anthropic API Key
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Create an API key
+
+### OpenAI API Key (for RAG embeddings)
 1. Go to [platform.openai.com](https://platform.openai.com)
 2. Create an API key
 

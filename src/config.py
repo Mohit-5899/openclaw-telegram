@@ -17,8 +17,9 @@ class TelegramSettings(BaseSettings):
 
 class AISettings(BaseSettings):
     """AI/LLM settings."""
-    openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
-    model: str = Field(default="gpt-4o", alias="AI_MODEL")
+    anthropic_api_key: str = Field(..., alias="ANTHROPIC_API_KEY")
+    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")  # For embeddings
+    model: str = Field(default="claude-opus-4-6", alias="AI_MODEL")
     max_tokens: int = Field(default=4096, alias="AI_MAX_TOKENS")
 
 

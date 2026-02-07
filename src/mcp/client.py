@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 from ..utils.logger import get_logger
 from .config import load_mcp_config, MCPServerConfig
-from .tool_converter import mcp_tools_to_openai, parse_tool_name, format_mcp_result
+from .tool_converter import mcp_tools_to_anthropic, parse_tool_name, format_mcp_result
 
 logger = get_logger("mcp-client")
 
@@ -196,8 +196,8 @@ def get_all_tools() -> list[dict]:
     all_tools = []
     
     for name, server in _servers.items():
-        openai_tools = mcp_tools_to_openai(server.tools, name)
-        all_tools.extend(openai_tools)
+        anthropic_tools = mcp_tools_to_anthropic(server.tools, name)
+        all_tools.extend(anthropic_tools)
     
     return all_tools
 

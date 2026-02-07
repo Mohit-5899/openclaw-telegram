@@ -12,47 +12,43 @@ from ..utils.logger import get_logger
 logger = get_logger("tool-converter")
 
 
-def mcp_tool_to_openai(tool: dict, server_name: str) -> dict:
+def mcp_tool_to_anthropic(tool: dict, server_name: str) -> dict:
     """
-    Convert a single MCP tool to OpenAI function format.
-    
+    Convert a single MCP tool to Anthropic tool format.
+
     Args:
         tool: MCP tool definition
         server_name: Name of the MCP server
-    
+
     Returns:
-        OpenAI function tool definition
+        Anthropic tool definition
     """
     # Create a unique tool name by prefixing with server name
     tool_name = f"{server_name}_{tool['name']}"
-    
-    # Build OpenAI function schema
+
     return {
-        "type": "function",
-        "function": {
-            "name": tool_name,
-            "description": tool.get("description", f"{server_name} tool: {tool['name']}"),
-            "parameters": tool.get("inputSchema", {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }),
-        }
+        "name": tool_name,
+        "description": tool.get("description", f"{server_name} tool: {tool['name']}"),
+        "input_schema": tool.get("inputSchema", {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }),
     }
 
 
-def mcp_tools_to_openai(tools: list[dict], server_name: str) -> list[dict]:
+def mcp_tools_to_anthropic(tools: list[dict], server_name: str) -> list[dict]:
     """
-    Convert multiple MCP tools to OpenAI format.
-    
+    Convert multiple MCP tools to Anthropic format.
+
     Args:
         tools: List of MCP tool definitions
         server_name: Name of the MCP server
-    
+
     Returns:
-        List of OpenAI function tool definitions
+        List of Anthropic tool definitions
     """
-    return [mcp_tool_to_openai(tool, server_name) for tool in tools]
+    return [mcp_tool_to_anthropic(tool, server_name) for tool in tools]
 
 
 def parse_tool_name(full_name: str) -> tuple[str, str] | None:

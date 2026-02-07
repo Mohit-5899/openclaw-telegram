@@ -26,10 +26,15 @@ _client: Optional[OpenAI] = None
 
 
 def _get_client() -> OpenAI:
-    """Get the OpenAI client."""
+    """Get the OpenAI client (used for embeddings only)."""
     global _client
     if _client is None:
         config = get_config()
+        if not config.ai.openai_api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY is required for RAG embeddings. "
+                "Set it in .env or disable RAG with RAG_ENABLED=false."
+            )
         _client = OpenAI(api_key=config.ai.openai_api_key)
     return _client
 
