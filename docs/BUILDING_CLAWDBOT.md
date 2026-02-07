@@ -12,6 +12,7 @@ In this tutorial, we'll build **ClawdBot**, an AI-powered Telegram assistant tha
 - 🔍 **RAG (Retrieval Augmented Generation)** - Searches through conversation history
 - 🔧 **Tool Integration** - Connects to GitHub, Notion, and more via MCP
 - ⏰ **Smart Scheduling** - Sets reminders with natural language
+- 🤖 **Claude Opus 4.6** - Powered by Anthropic's latest model
 
 Whether you're building a personal assistant, a team productivity bot, or a customer support agent, this architecture scales to meet your needs.
 
@@ -42,7 +43,7 @@ Whether you're building a personal assistant, a team productivity bot, or a cust
 │                        │                                     │
 │                        ▼                                     │
 │              ┌─────────────────────┐                        │
-│              │   OpenAI GPT-4o    │                        │
+│              │  Claude Opus 4.6   │                        │
 │              │   (with tools)      │                        │
 │              └─────────────────────┘                        │
 └─────────────────────────────────────────────────────────────┘
@@ -64,7 +65,8 @@ Before we start, you'll need:
 
 - **Python 3.10+** installed
 - A **Telegram Bot Token** (from [@BotFather](https://t.me/BotFather))
-- An **OpenAI API Key**
+- An **Anthropic API Key** (for Claude Opus 4.6)
+- An **OpenAI API Key** (for RAG embeddings only)
 - (Optional) **mem0.ai API Key** for long-term memory
 - (Optional) **GitHub/Notion tokens** for MCP integration
 
@@ -98,6 +100,8 @@ telegram-clawdbot/
 │   └── tools/
 │       ├── scheduler.py     # Reminders and tasks
 │       └── telegram_actions.py # Telegram API tools
+├── Dockerfile
+├── docker-compose.yml
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -114,7 +118,7 @@ mkdir telegram-clawdbot && cd telegram-clawdbot
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-pip install python-telegram-bot openai mem0ai pydantic pydantic-settings \
+pip install anthropic python-telegram-bot openai mem0ai pydantic pydantic-settings \
             python-dotenv apscheduler numpy colorlog
 ```
 
@@ -125,6 +129,9 @@ Create a `.env` file:
 ```env
 # Required
 TELEGRAM_BOT_TOKEN=your_bot_token_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
+
+# Required for RAG embeddings
 OPENAI_API_KEY=your_openai_key_here
 
 # Optional - Memory
@@ -136,7 +143,7 @@ RAG_ENABLED=true
 
 # Optional - MCP Tools
 GITHUB_PERSONAL_ACCESS_TOKEN=your_github_token
-NOTION_API_TOKEN=your_notion_token
+NOTION_TOKEN=your_notion_token
 ```
 
 ---
@@ -155,8 +162,9 @@ class TelegramSettings(BaseSettings):
     bot_token: str = Field(alias="TELEGRAM_BOT_TOKEN")
 
 class AISettings(BaseSettings):
-    openai_api_key: str = Field(alias="OPENAI_API_KEY")
-    model: str = Field(default="gpt-4o", alias="AI_MODEL")
+    anthropic_api_key: str = Field(alias="ANTHROPIC_API_KEY")
+    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")  # For embeddings
+    model: str = Field(default="claude-opus-4-6", alias="AI_MODEL")
     max_tokens: int = Field(default=4096, alias="AI_MAX_TOKENS")
 
 class MemorySettings(BaseSettings):
@@ -167,7 +175,7 @@ class Settings(BaseSettings):
     telegram: TelegramSettings = TelegramSettings()
     ai: AISettings = AISettings()
     memory: MemorySettings = MemorySettings()
-    
+
     class Config:
         env_file = ".env"
         extra = "ignore"
@@ -219,7 +227,7 @@ def init_database():
     """Initialize the database with required tables."""
     global _conn
     _conn = sqlite3.connect("data/clawdbot.db", check_same_thread=False)
-    
+
     _conn.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             id TEXT PRIMARY KEY,
@@ -229,7 +237,7 @@ def init_database():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
+
     _conn.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
@@ -240,7 +248,7 @@ def init_database():
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         )
     """)
-    
+
     _conn.commit()
 
 def get_or_create_session(user_id: int, chat_id: int, chat_type: str) -> Session:
@@ -250,11 +258,11 @@ def get_or_create_session(user_id: int, chat_id: int, chat_type: str) -> Session
         (user_id, chat_id)
     )
     row = cursor.fetchone()
-    
+
     if row:
-        return Session(id=row[0], user_id=row[1], chat_id=row[2], 
+        return Session(id=row[0], user_id=row[1], chat_id=row[2],
                       chat_type=row[3], created_at=row[4])
-    
+
     # Create new session
     session_id = str(uuid.uuid4())
     _conn.execute(
@@ -262,7 +270,7 @@ def get_or_create_session(user_id: int, chat_id: int, chat_type: str) -> Session
         (session_id, user_id, chat_id, chat_type)
     )
     _conn.commit()
-    
+
     return Session(id=session_id, user_id=user_id, chat_id=chat_id,
                   chat_type=chat_type, created_at=datetime.now())
 ```
@@ -271,7 +279,7 @@ def get_or_create_session(user_id: int, chat_id: int, chat_type: str) -> Session
 
 ## Step 4: Build the RAG System
 
-RAG enables semantic search over conversation history.
+RAG enables semantic search over conversation history. Note: Embeddings still use OpenAI's `text-embedding-3-small` model since Anthropic does not offer an embedding API.
 
 ### Embeddings
 
@@ -282,8 +290,8 @@ from typing import List
 import numpy as np
 
 def create_embedding(text: str) -> List[float]:
-    """Create an embedding for a piece of text."""
-    client = OpenAI()
+    """Create an embedding for a piece of text using OpenAI."""
+    client = OpenAI()  # Uses OPENAI_API_KEY
     response = client.embeddings.create(
         model="text-embedding-3-small",
         input=text
@@ -316,18 +324,18 @@ class VectorStore:
         self.path = path
         self.documents: List[Document] = []
         self._load()
-    
+
     def add(self, doc: Document):
         self.documents.append(doc)
         self._save()
-    
+
     def search(self, query_embedding: List[float], top_k: int = 5) -> List[Document]:
         """Find most similar documents."""
         scored = []
         for doc in self.documents:
             score = cosine_similarity(query_embedding, doc.embedding)
             scored.append((score, doc))
-        
+
         scored.sort(key=lambda x: x[0], reverse=True)
         return [doc for _, doc in scored[:top_k]]
 ```
@@ -354,14 +362,14 @@ async def add_memory(messages: List[dict], user_id: int):
     """Extract and store memories from a conversation."""
     if _client is None:
         return
-    
+
     _client.add(messages, user_id=str(user_id))
 
 async def search_memory(query: str, user_id: int, limit: int = 5) -> List[dict]:
     """Search for relevant memories."""
     if _client is None:
         return []
-    
+
     results = _client.search(query, user_id=str(user_id), limit=limit)
     return results.get("results", [])
 
@@ -369,11 +377,11 @@ def build_memory_context(memories: List[dict]) -> str:
     """Format memories for the LLM context."""
     if not memories:
         return ""
-    
+
     lines = ["## Relevant Memories About This User:"]
     for mem in memories:
         lines.append(f"- {mem.get('memory', '')}")
-    
+
     return "\n".join(lines)
 ```
 
@@ -381,11 +389,11 @@ def build_memory_context(memories: List[dict]) -> str:
 
 ## Step 6: Create the AI Agent
 
-The agent orchestrates everything:
+The agent orchestrates everything. It uses the **Anthropic SDK** to call Claude Opus 4.6 with tool use:
 
 ```python
 # src/agents/agent.py
-from openai import OpenAI
+from anthropic import Anthropic
 from dataclasses import dataclass
 from typing import List
 
@@ -417,67 +425,95 @@ class AgentContext:
 
 async def process_message(user_message: str, context: AgentContext) -> str:
     """Process a user message and generate a response."""
-    client = OpenAI()
-    
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    
+    client = Anthropic()
+
+    # Build system prompt with memory and RAG context
+    system_parts = [SYSTEM_PROMPT]
+
     # 1. Retrieve memories
     memories = await search_memory(user_message, context.user_id)
     if memories:
-        memory_context = build_memory_context(memories)
-        messages.append({"role": "system", "content": memory_context})
-    
+        system_parts.append(build_memory_context(memories))
+
     # 2. Retrieve RAG context
     if should_use_rag(user_message):
         rag_results = await retrieve(user_message, chat_id=context.chat_id)
         if rag_results:
-            messages.append({"role": "system", "content": rag_results})
-    
-    # 3. Add conversation history
+            system_parts.append(build_context_string(rag_results))
+
+    system_prompt = "\n\n".join(system_parts)
+
+    # 3. Build messages from conversation history
+    messages = []
     history = get_session_history(context.session_id)
-    messages.extend(history)
-    
+    for msg in history:
+        messages.append({"role": msg.role, "content": msg.content})
+
     # 4. Add current message
     messages.append({"role": "user", "content": user_message})
-    
-    # 5. Call OpenAI with tools
-    response = client.chat.completions.create(
-        model="gpt-4o",
+
+    # 5. Call Claude with tools
+    response = client.messages.create(
+        model="claude-opus-4-6",
+        max_tokens=4096,
+        system=system_prompt,
         messages=messages,
         tools=get_all_tools(),
-        tool_choice="auto"
     )
-    
+
     # 6. Handle tool calls (loop until no more tools)
-    assistant_message = response.choices[0].message
-    
-    while assistant_message.tool_calls:
-        # Execute each tool
-        for tool_call in assistant_message.tool_calls:
-            result = await execute_tool(tool_call.function.name, 
-                                        tool_call.function.arguments)
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": result
-            })
-        
+    while response.stop_reason == "tool_use":
+        assistant_content = response.content
+        messages.append({"role": "assistant", "content": assistant_content})
+
+        # Execute each tool and collect results
+        tool_results = []
+        for block in assistant_content:
+            if block.type == "tool_use":
+                result = await execute_tool(block.name, block.input)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result,
+                })
+
+        # Send tool results back
+        messages.append({"role": "user", "content": tool_results})
+
         # Continue conversation
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        response = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=4096,
+            system=system_prompt,
             messages=messages,
-            tools=get_all_tools()
+            tools=get_all_tools(),
         )
-        assistant_message = response.choices[0].message
-    
-    # 7. Store memories asynchronously
+
+    # 7. Extract text response
+    content = ""
+    for block in response.content:
+        if hasattr(block, "text"):
+            content += block.text
+
+    # 8. Store memories asynchronously
     asyncio.create_task(add_memory([
         {"role": "user", "content": user_message},
-        {"role": "assistant", "content": assistant_message.content}
+        {"role": "assistant", "content": content}
     ], context.user_id))
-    
-    return assistant_message.content
+
+    return content
 ```
+
+### Key Differences from OpenAI
+
+| Aspect | OpenAI | Anthropic |
+|--------|--------|-----------|
+| **System prompt** | Passed as a message with `role: "system"` | Top-level `system` parameter |
+| **Tool definitions** | `{type: "function", function: {name, parameters}}` | `{name, description, input_schema}` |
+| **Tool call detection** | `message.tool_calls` list | `response.stop_reason == "tool_use"` |
+| **Tool arguments** | JSON string (`json.loads` needed) | Already parsed as a dict (`block.input`) |
+| **Tool results** | `{role: "tool", tool_call_id, content}` | `{role: "user", content: [{type: "tool_result", ...}]}` |
+| **Response text** | `message.content` (string) | `response.content` (list of blocks, extract `.text`) |
 
 ---
 
@@ -505,13 +541,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle regular messages."""
     user = update.effective_user
     chat = update.effective_chat
-    
+
     # Get session
     session = get_or_create_session(user.id, chat.id, chat.type)
-    
+
     # Show typing indicator
     await context.bot.send_chat_action(chat_id=chat.id, action="typing")
-    
+
     # Process through AI agent
     agent_context = AgentContext(
         user_id=user.id,
@@ -519,9 +555,9 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session_id=session.id,
         user_name=user.first_name
     )
-    
+
     response = await process_message(update.message.text, agent_context)
-    
+
     await update.message.reply_text(response, parse_mode="Markdown")
 
 def setup_handlers(application):
@@ -529,7 +565,7 @@ def setup_handlers(application):
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND, 
+        filters.TEXT & ~filters.COMMAND,
         message_handler
     ))
 ```
@@ -549,21 +585,21 @@ load_dotenv()
 async def main():
     # Load configuration
     config = get_config()
-    
+
     # Initialize services
     init_database()
     init_vectorstore()
-    
+
     if config.memory.api_key:
         await initialize_memory(config.memory.api_key)
-    
+
     # Create and run bot
     application = Application.builder() \
         .token(config.telegram.bot_token) \
         .build()
-    
+
     setup_handlers(application)
-    
+
     print("🚀 ClawdBot is running!")
     await application.run_polling(drop_pending_updates=True)
 
@@ -575,9 +611,24 @@ if __name__ == "__main__":
 
 ## Running Your Bot
 
+### Option 1: Direct
+
 ```bash
 # Make sure you're in the project directory with venv activated
 python -m src.main
+```
+
+### Option 2: Docker
+
+```bash
+# Build and run
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
 ```
 
 You should see:
@@ -607,14 +658,14 @@ To integrate GitHub and Notion, create `mcp-config.json`:
       "command": "npx",
       "args": ["-y", "@notionhq/notion-mcp-server"],
       "env": {
-        "NOTION_API_TOKEN": "${NOTION_API_TOKEN}"
+        "NOTION_TOKEN": "${NOTION_TOKEN}"
       }
     }
   }
 }
 ```
 
-The MCP client spawns these servers as subprocesses and communicates via JSON-RPC.
+The MCP client spawns these servers as subprocesses and communicates via JSON-RPC. Tool definitions from MCP are automatically converted to Anthropic's tool format.
 
 ---
 
@@ -622,9 +673,10 @@ The MCP client spawns these servers as subprocesses and communicates via JSON-RP
 
 1. **Modular Architecture** - Each component (RAG, Memory, Tools) is isolated and testable
 2. **Async Everything** - Non-blocking I/O for responsive user experience
-3. **Tool Calling Loop** - Let the LLM decide which tools to use, execute them, and continue
+3. **Tool Calling Loop** - Let Claude decide which tools to use, execute them, and continue
 4. **Memory Layers** - Combine short-term (database) with long-term (mem0) memory
 5. **Configuration First** - Use Pydantic for type-safe, validated configuration
+6. **Dual SDKs** - Anthropic for conversation, OpenAI for embeddings only
 
 ---
 
@@ -634,13 +686,15 @@ The MCP client spawns these servers as subprocesses and communicates via JSON-RP
 - **Implement webhooks**: For production deployment instead of polling
 - **Add authentication**: Role-based access for team bots
 - **Monitor & log**: Track usage, errors, and performance
+- **Dockerize**: Use the included Dockerfile for easy deployment
 
 ---
 
 ## Resources
 
 - [python-telegram-bot Documentation](https://docs.python-telegram-bot.org/)
-- [OpenAI Function Calling Guide](https://platform.openai.com/docs/guides/function-calling)
+- [Anthropic Claude API Documentation](https://docs.anthropic.com/en/docs)
+- [Anthropic Tool Use Guide](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
 - [mem0.ai Documentation](https://docs.mem0.ai/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 

@@ -40,7 +40,7 @@ class RAGSettings(BaseSettings):
 class MCPSettings(BaseSettings):
     """MCP server settings."""
     github_token: Optional[str] = Field(default=None, alias="GITHUB_PERSONAL_ACCESS_TOKEN")
-    notion_token: Optional[str] = Field(default=None, alias="NOTION_API_TOKEN")
+    notion_token: Optional[str] = Field(default=None, alias="NOTION_TOKEN")
 
 
 class AppSettings(BaseSettings):

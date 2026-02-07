@@ -134,7 +134,8 @@ async def search_memory(
         result = _memory_client.search(
             query,
             user_id=str(user_id),
-            limit=limit
+            limit=limit,
+            filters={"AND": [{"user_id": str(user_id)}]},
         )
         
         memories = result.get("results", []) if isinstance(result, dict) else result or []

@@ -6,6 +6,7 @@ Loads MCP server configurations from environment variables or config file.
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -14,6 +15,9 @@ from ..utils.logger import get_logger
 from ..config import get_config
 
 logger = get_logger("mcp-config")
+
+# Pattern to match ${VAR_NAME} env var references
+_ENV_VAR_PATTERN = re.compile(r"^\$\{([^}]+)\}$")
 
 
 @dataclass
@@ -49,11 +53,26 @@ def load_mcp_config() -> MCPConfig:
                 data = json.load(f)
             
             for name, server_config in data.get("mcpServers", {}).items():
+                # Resolve ${VAR_NAME} references in env values
+                raw_env = server_config.get("env", {})
+                resolved_env = {}
+                for key, value in raw_env.items():
+                    match = _ENV_VAR_PATTERN.match(value)
+                    if match:
+                        var_name = match.group(1)
+                        resolved = os.environ.get(var_name)
+                        if resolved:
+                            resolved_env[key] = resolved
+                        else:
+                            logger.warning(f"Environment variable {var_name} not set for MCP server '{name}'")
+                    else:
+                        resolved_env[key] = value
+
                 servers.append(MCPServerConfig(
                     name=name,
                     command=server_config.get("command", "npx"),
                     args=server_config.get("args", []),
-                    env=server_config.get("env", {}),
+                    env=resolved_env,
                 ))
             
             logger.info(f"Loaded {len(servers)} MCP servers from config file")
@@ -84,7 +103,7 @@ def load_mcp_config() -> MCPConfig:
             name="notion",
             command="npx",
             args=["-y", "@notionhq/notion-mcp-server"],
-            env={"NOTION_API_TOKEN": notion_token},
+            env={"NOTION_TOKEN": notion_token},
         ))
         logger.info("Notion MCP server configured")
     

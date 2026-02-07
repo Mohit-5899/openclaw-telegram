@@ -44,7 +44,7 @@ MEM0_API_KEY=your_mem0_api_key
 
 # Optional - MCP Tools
 GITHUB_PERSONAL_ACCESS_TOKEN=your_github_token
-NOTION_API_TOKEN=your_notion_token
+NOTION_TOKEN=your_notion_token
 ```
 
 ### 3. Run
@@ -128,7 +128,7 @@ User Message → Telegram Bot → Agent
 | `MEMORY_ENABLED` | ❌ | Enable/disable memory (default: true) |
 | `RAG_ENABLED` | ❌ | Enable/disable RAG (default: true) |
 | `GITHUB_PERSONAL_ACCESS_TOKEN` | ❌ | GitHub token for MCP |
-| `NOTION_API_TOKEN` | ❌ | Notion token for MCP |
+| `NOTION_TOKEN` | ❌ | Notion token for MCP |
 | `LOG_LEVEL` | ❌ | Logging level (default: info) |
 
 ## Getting API Keys

@@ -586,6 +586,24 @@ TELEGRAM_TOOLS = [
         }
     },
     {
+        "name": "schedule_recurring_reminder",
+        "description": "Schedule a recurring reminder using a cron expression. Use standard 5-field cron format (minute hour day month weekday). Examples: '0 22 * * *' for daily at 10pm UTC, '0 9 * * 1' for every Monday at 9am UTC, '0 8 1 * *' for 1st of every month at 8am UTC.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "reminder_text": {
+                    "type": "string",
+                    "description": "The reminder message"
+                },
+                "cron_expression": {
+                    "type": "string",
+                    "description": "Cron expression for the schedule (e.g., '0 22 * * *' for daily at 10pm)"
+                }
+            },
+            "required": ["reminder_text", "cron_expression"]
+        }
+    },
+    {
         "name": "list_reminders",
         "description": "List all scheduled reminders for the current user",
         "input_schema": {

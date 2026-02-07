@@ -7,6 +7,7 @@ Uses Anthropic Claude (Opus 4.6) for conversation.
 
 import asyncio
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from anthropic import Anthropic
@@ -60,7 +61,8 @@ You have access to Telegram-specific tools:
 - `get_chat_administrators` - List group admins
 - `forward_message` - Forward messages between chats
 - `pin_message` / `unpin_message` - Pin/unpin messages
-- `schedule_reminder` - Set reminders (e.g., "in 5 minutes", "tomorrow at 9am")
+- `schedule_reminder` - Set one-time reminders (e.g., "in 5 minutes", "tomorrow at 9am")
+- `schedule_recurring_reminder` - Set recurring reminders using cron (e.g., daily at 10pm)
 - `list_reminders` - View scheduled reminders
 - `cancel_reminder` - Cancel a reminder by ID
 
@@ -251,6 +253,19 @@ async def _execute_tool(
 
         return f"Reminder scheduled for {scheduled_time.strftime('%Y-%m-%d %H:%M')}:\n\"{reminder_text}\"\n\nReminder ID: #{task.id}"
 
+    if name == "schedule_recurring_reminder":
+        reminder_text = args.get("reminder_text")
+        cron_expression = args.get("cron_expression")
+
+        task = await task_scheduler.schedule_task(
+            user_id=context.user_id,
+            chat_id=context.chat_id,
+            description=reminder_text,
+            cron_expression=cron_expression,
+        )
+
+        return f"Recurring reminder scheduled (cron: `{cron_expression}`):\n\"{reminder_text}\"\n\nReminder ID: #{task.id}"
+
     if name == "list_reminders":
         tasks = get_user_tasks(context.user_id)
         pending = [t for t in tasks if t.status == "pending"]
@@ -309,6 +324,11 @@ async def process_message(
 
     # Build system prompt with additional context
     system_parts = [SYSTEM_PROMPT]
+
+    # Inject current date/time awareness
+    now = datetime.now(timezone.utc)
+    formatted_dt = now.strftime("%A, %B %d, %Y %I:%M %p")
+    system_parts.append(f"## Current Date & Time\n{formatted_dt} (timezone: UTC)")
 
     # 1. Retrieve relevant memories
     if is_memory_enabled():
